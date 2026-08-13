@@ -1,0 +1,13 @@
+[Unit]
+Description=Run sovereign-sigint AI ingest pipeline every 4 hours
+
+[Timer]
+# Every 4 hours — matches the Job Hunter pipeline's poll cadence for
+# consistency across this box's scheduled jobs, not a hard technical
+# requirement. Adjust freely if ingest volume/timeliness needs differ.
+OnBootSec=10min
+OnUnitActiveSec=4h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

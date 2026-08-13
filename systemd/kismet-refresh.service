@@ -1,0 +1,10 @@
+[Unit]
+Description=sovereign-sigint Kismet capture staging (semi-live AI bridge)
+# Stages the newest completed Kismet capture to kismet-data/latest.kismet so
+# the native Open WebUI tool always queries recent WiFi data. Filesystem-only;
+# no dependency on Open WebUI or Kismet units (it just copies a file).
+
+[Service]
+# __REPO_ROOT__ substituted by scripts/phase7-kismet-refresh.sh at install time.
+Type=oneshot
+ExecStart=__REPO_ROOT__/scripts/kismet-refresh.sh

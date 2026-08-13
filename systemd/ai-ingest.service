@@ -1,0 +1,22 @@
+[Unit]
+Description=sovereign-sigint AI ingest pipeline (Phase 5)
+# Deliberately no explicit dependency on Ollama/Open WebUI units — this
+# pipeline is filesystem-only and decoupled from both, per
+# docs/build-order.md Phase 5.
+
+[Service]
+Type=oneshot
+# __REPO_ROOT__ and __VENV_PYTHON__ are substituted by
+# scripts/phase5-ai-ingest.sh at install time — this file as checked
+# into git is a template, not something to enable directly.
+WorkingDirectory=__REPO_ROOT__/ai-ingest
+# HF_HUB_OFFLINE=1 stops Docling from making a HuggingFace version-check
+# call on every startup. Docling's models are downloaded once during
+# phase5-ai-ingest.sh's venv install and cached locally under the ai-ingest
+# venv (rapidocr under site-packages/rapidocr/models/, layout+tableformer
+# under ~/.cache/huggingface/hub/); the version check verifies these are
+# current. Turning it off keeps the platform truly airgapped-capable —
+# consistent with the "nothing leaves the box" thesis. Unset this
+# temporarily if you ever need to pull an updated Docling model.
+Environment=HF_HUB_OFFLINE=1
+ExecStart=__VENV_PYTHON__ __REPO_ROOT__/ai-ingest/ingest.py --once

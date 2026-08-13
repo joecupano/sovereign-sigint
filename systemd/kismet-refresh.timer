@@ -1,0 +1,15 @@
+[Unit]
+Description=Refresh staged Kismet capture for the AI bridge every 15 min
+
+[Timer]
+# Every 15 minutes — "semi-live": frequent enough that the AI sees recent
+# captures soon after a Kismet session ends, without the cost of running
+# Kismet continuously. The refresh is a no-op when nothing changed and skips
+# while Kismet is actively writing, so a tight interval is cheap. Adjust
+# freely.
+OnBootSec=5min
+OnUnitActiveSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

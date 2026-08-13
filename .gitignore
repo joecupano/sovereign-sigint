@@ -1,0 +1,22 @@
+# FFTW wisdom files (host-specific, regenerate per machine)
+*.wisdom
+wisdomf
+
+# Recordings / captures (large binary, not for git)
+*.wav
+*.iq
+*.sigmf-data
+recordings/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Local secrets / env
+.env
+*.env
+credentials.json
+
+# OS cruft
+.DS_Store

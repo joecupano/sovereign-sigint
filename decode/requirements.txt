@@ -1,0 +1,45 @@
+# sigint-processing domain — Phase 6 (SIGINT software and processing)
+#
+# Installed into the "sigint-processing" venv — see docs/venvs.md for the
+# venv registry and conventions. Do not pip install these into system
+# Python. Note: gnuradio, direwolf, and multimon-ng themselves are apt/
+# source installs (Phase 6 system packages), not pip packages — this file
+# covers the Python-side scripts that sit on top of them.
+
+numpy              # signal feature extraction (duty cycle, phase continuity, etc.)
+scipy              # spectral analysis support
+sigmf==1.11.1      # WRITER ONLY — used to generate spec-compliant SigMF
+                   # recordings for external consumption (IQEngine, GNU
+                   # Radio's SigMF blocks, other third-party tooling).
+                   # Pinned deliberately: an earlier unpinned install broke
+                   # sigint-ingest.py when SigMFFile.__init__() changed its
+                   # keyword arguments between versions. Current API (this
+                   # version) is functional-style — sigmf.fromarray(data),
+                   # meta.add_capture(...), meta.tofile(...) — not the old
+                   # SigMFFile(metadata_path=..., data_path=...) constructor.
+                   # Bump this pin deliberately, with a smoke test against
+                   # both read and write paths, not via a routine upgrade.
+                   #
+                   # READING stays on direct JSON parsing (see
+                   # sigint-ingest.py) — do NOT reintroduce this library on
+                   # the read path. Metadata is plain JSON against a
+                   # documented, versioned spec; parsing it directly is the
+                   # proven, dependency-free approach and avoids repeating
+                   # the exact bug this pin exists to prevent.
+
+# requests (FCC ULS enrichment lookups) and faster-whisper (spoken-
+# callsign transcription) were removed earlier — both were specifically
+# for callsign-over-time tracking (docs/build-order.md Phase 6,
+# "deferred" section), which is deferred for now.
+#
+# requests is back, though — needed for the SigID mirror (Phase 6.3)
+# to call sigidwiki.com's MediaWiki API. Different reason than before,
+# not a walk-back of the earlier removal.
+requests
+
+matplotlib         # spectrogram rendering for vision-model comparison
+                   # (docs/vision-signal-identification-guide.md) — added
+                   # here so it's part of the standard sigint-processing
+                   # venv build, rather than a manual pip-install step a
+                   # reader has to do themselves partway through that guide.
+

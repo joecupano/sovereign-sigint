@@ -1,0 +1,14 @@
+[Unit]
+Description=Run sovereign-sigint SigID mirror sync weekly
+
+[Timer]
+# Weekly, not hourly/daily like the AI ingest timer — SigID is a slow-
+# changing curated wiki (~589 signals, additions are infrequent), and
+# hitting a small community site's API more often than that buys
+# nothing while being a worse citizen than necessary.
+OnBootSec=15min
+OnUnitActiveSec=7d
+Persistent=true
+
+[Install]
+WantedBy=timers.target

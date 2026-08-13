@@ -1,0 +1,28 @@
+[Unit]
+Description=sovereign-sigint OpenAPI tool server (DB->AI query path)
+# Exposes the read-only SIGINT tools (query_occupancy, lookup_signal_candidate,
+# radiod_status) to Open WebUI as an OpenAPI tool server. This is the DB->AI
+# query path: it lets the local LLM query the occupancy database in natural
+# language. Uses OpenAPI (not MCP) because Open WebUI's native MCP client is
+# currently broken (see docs/openapi-to-mcp-migration.md).
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Long-running FastAPI/uvicorn server. __REPO_ROOT__ and __VENV_PYTHON__
+# substituted by scripts/phase6-openapi-tools.sh at install time.
+# Binds 0.0.0.0 so Open WebUI's browser-side validation (from the operator's
+# machine) and the container can both reach it; the port is ufw-scoped to the
+# LAN, and the tools are read-only, so this matches the OpenWebRX+/Kismet
+# LAN-access posture. Set SIGINT_OPENAPI_HOST=127.0.0.1 to restrict to
+# loopback (then reach via SSH tunnel).
+Type=simple
+Environment=SIGINT_OPENAPI_HOST=0.0.0.0
+Environment=SIGINT_OPENAPI_PORT=8130
+WorkingDirectory=__REPO_ROOT__/openapi-tools
+ExecStart=__VENV_PYTHON__ __REPO_ROOT__/openapi-tools/sigint_openapi_server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

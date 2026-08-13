@@ -1,0 +1,86 @@
+[Unit]
+Description=Open WebUI (sovereign-sigint)
+After=network-online.target
+
+[Container]
+Image=ghcr.io/open-webui/open-webui:main
+ContainerName=open-webui
+AutoUpdate=registry
+
+# Bound to loopback only — Caddy is the public/LAN-facing entrypoint
+# (see caddy.container), not Open WebUI directly.
+PublishPort=127.0.0.1:8080:8080
+
+# App state (webui.db, vector_db/, cache/) — everything EXCEPT uploaded
+# RAG documents — lives in a Podman-managed named volume, not /data.
+# This is deliberately separate from the /data/rag bind mount below:
+# app state isn't "static documents for RAG" in the sense docs/data-
+# layout.md means, and letting Podman manage it avoids fighting Open
+# WebUI's internal directory layout on a host path.
+Volume=open-webui-state:/app/backend/data
+
+# RAG source documents land here specifically (confirmed internal path:
+# uploads/ under DATA_DIR, per Open WebUI's own docs/database-schema
+# reference) — bind-mounted to /data/rag so they're host-visible and
+# covered by whatever backs up /data, per docs/data-layout.md.
+#
+# :U tells Podman to reconcile ownership of the bind-mounted directory
+# to match the container's UID mapping on start — needed for rootless
+# Podman, where the container's internal user and the host directory's
+# owner (the human operator, per scripts/setup-data-dirs.sh) don't
+# match by default. If uploads still fail with a permissions error
+# after first launch, check `podman exec open-webui id` against the
+# ownership of /data/rag on the host.
+Volume=/data/rag:/app/backend/data/uploads:U
+
+# ---------------------------------------------------------------------
+# Native SIGINT-tool data mounts — each maps a host-side data source to
+# the exact in-container path the corresponding tool's default valve
+# expects, so the tools work out of the box against `podman exec`
+# after a clean install. Paths are documented at the top of each tool
+# file under openwebui-tools/. Verified end-to-end on real hardware:
+# each tool returns real rows against a live-populated source.
+# ---------------------------------------------------------------------
+
+# occupancy tool -> /data/sigint/occupancy.db (Phase 6.6 producer writes
+# to db/occupancy.db in the repo tree; that directory becomes /data/sigint
+# in the container).
+Volume=%h/sovereign-sigint/db:/data/sigint
+
+# Kismet tool -> /data/kismet/latest.kismet. Bind the kismet-refresh
+# staging directory (kismet-data/, populated by scripts/kismet-refresh.sh
+# and its --user timer) — NOT ~/kismet-captures, which was an earlier
+# scratch path that never got wired to the refresh producer and left the
+# container mounting an empty file. Phase 7 verifies this end-to-end.
+Volume=%h/sovereign-sigint/kismet-data:/data/kismet
+
+# SigID reference mirror (read-only) -> /data/sigid-ref/metadata. The
+# host path is where the sigid-mirror.service Phase 6.3 syncs the
+# sigidwiki catalog to; :ro because the tool only reads.
+Volume=/data/reference/sigid:/data/sigid-ref:ro
+
+# whisper transcription tool -> /data/audio. Bind the host's shared audio
+# staging directory (the same one ai-ingest reads from) so the native
+# whisper tool can transcribe files the operator drops there OR that
+# radiod's pcmrecord writes. Read-write so faster-whisper's model cache
+# operations (which may touch the working directory) don't fail.
+# See openwebui-tools/sovereign_sigint_whisper_tool.py.
+Volume=/data/audio:/data/audio
+
+# host.containers.internal lets the container reach services running
+# natively on the host (Ollama, per Phase 3). AddHost= is the natural
+# Quadlet key for this but isn't supported in the Podman version
+# Ubuntu 24.04 ships (4.9.3 — confirmed via a real install; AddHost
+# needs a newer Quadlet). PodmanArgs= is the generic escape hatch that
+# passes straight through to `podman run`, so it works regardless of
+# Quadlet's own key coverage for this Podman version.
+PodmanArgs=--add-host=host.containers.internal:host-gateway
+Environment=OLLAMA_BASE_URL=http://host.containers.internal:11434
+Environment=ANONYMIZED_TELEMETRY=False
+
+[Service]
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

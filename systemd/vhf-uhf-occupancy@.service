@@ -1,0 +1,58 @@
+[Unit]
+# Templated systemd --user service for the VHF/UHF key-frequency occupancy
+# producer. Instance name %i = device name that the producer's --device flag
+# accepts: 'hackrf' (primary, USB2, Comet GP-1) or 'rtlsdr' (backup).
+#
+# Templated because HackRF and RTL-SDR are independent single-owner USB
+# devices -- one can be in AI mode while the other is free for OpenWebRX+,
+# and the switching model in scripts/sdr-mode.sh treats them per-device.
+# One template unit, two enable-able instances:
+#   vhf-uhf-occupancy@hackrf.service
+#   vhf-uhf-occupancy@rtlsdr.service
+#
+# Not enabled by default at install time (unlike radiod-occupancy which
+# owns the RX-888 dedicated to HF ingest). Operator opts in per device via
+# scripts/sdr-mode.sh -- 'sudo ./scripts/sdr-mode.sh hackrf ai' enables and
+# starts the hackrf instance; 'hackrf interactive' disables and stops it,
+# releasing the device back to OpenWebRX+ / interactive use. Rationale:
+# HackRF and RTL-SDR both serve dual purposes on this build (occupancy vs.
+# OpenWebRX+ waterfall), and defaulting either to a running producer would
+# grab a device the operator might want for interactive use.
+#
+# See docs/build-order.md Phase 6.6 (occupancy producers) and
+# scripts/sdr-mode.sh header for the operating model.
+Description=sovereign-sigint VHF/UHF occupancy producer (%i)
+# The producer writes to db/occupancy.db via OccupancyDB.record_sighting();
+# no explicit dependency on other units -- it starts, sweeps, writes,
+# repeats. If the DB is missing it creates it (idempotent).
+After=default.target
+
+[Service]
+# __REPO_ROOT__ and __VENV_PYTHON__ are substituted by
+# scripts/phase6-vhf-uhf-producer.sh at install time. This file as
+# checked into git is a template, not something to enable directly
+# without installing first.
+Type=simple
+WorkingDirectory=__REPO_ROOT__/decode
+# %i is the instance name -- systemd substitutes it into --device at
+# service-start time. So 'systemctl --user start vhf-uhf-occupancy@hackrf'
+# runs the producer with --device hackrf, and @rtlsdr with --device rtlsdr.
+# The producer's argparse rejects any other value, so a typo can't launch
+# something unintended.
+ExecStart=__VENV_PYTHON__ __REPO_ROOT__/decode/vhf_uhf_key_freq_producer.py \
+    --device %i --interval 60
+# The producer is long-running and continuous by design (--interval, not
+# --once). If the USB device disappears or the process crashes, restart
+# after a modest cooldown -- long enough that a USB re-enumerate loop
+# won't hammer the service.
+Restart=on-failure
+RestartSec=15
+# StandardOutput/Error inherit systemd journal defaults, so
+# 'journalctl --user -u vhf-uhf-occupancy@hackrf' shows the sweep log.
+
+[Install]
+# Instance-scoped install target: enabling 'vhf-uhf-occupancy@hackrf'
+# creates a symlink under default.target.wants/, so it autostarts on
+# the operator's session. Lingering (already enabled for baldrick per
+# phase 6.6) keeps it running after logout.
+WantedBy=default.target

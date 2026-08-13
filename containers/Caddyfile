@@ -1,0 +1,25 @@
+# Caddyfile — sovereign-sigint
+#
+# Default: plain HTTP on :8000, reverse-proxied to Open WebUI on
+# 127.0.0.1:8080. Not port 80: rootless Podman can't bind ports below
+# 1024 without lowering net.ipv4.ip_unprivileged_port_start
+# system-wide (a real install hit this — "bind: permission denied" on
+# :80) — moving Caddy to :8000 avoids a system-wide policy change for
+# one container's convenience of a bare URL.
+#
+# No domain configured, so Caddy's automatic HTTPS is NOT active here
+# — that feature requires a real public domain with DNS pointing at
+# this box and port 443 reachable from the internet, which doesn't fit
+# an internal lab/production box on a LAN.
+#
+# If/when this needs HTTPS on the LAN:
+#   - For a real domain with public DNS: replace ":8000" below with
+#     your domain name (e.g. "sigint.example.com") and Caddy will
+#     handle Let's Encrypt automatically — no other config needed.
+#   - For LAN-only HTTPS with a self-signed cert: use "tls internal"
+#     inside the block instead, and trust Caddy's local CA on client
+#     machines that need to avoid browser warnings.
+
+:8000 {
+	reverse_proxy 127.0.0.1:8080
+}

@@ -1,0 +1,41 @@
+[Unit]
+# System-level unit that autostarts the Kismet daemon on boot.
+# Ships with __TARGET_USER__ as a placeholder — scripts/phase7-kismet.sh
+# substitutes it (via sed) at install time to whoever runs the phase script,
+# then daemon-reloads and enables the unit. Mirrors the templating pattern
+# used by systemd/kismet-refresh.service (which uses __REPO_ROOT__).
+#
+# The rest of the build follows a "user services under lingering" pattern for
+# always-on work (radiod-occupancy, ai-ingest, sigid-mirror, kismet-refresh).
+# Kismet itself is a *system* service by contrast, because 'make suidinstall'
+# installs setuid-root capture helpers that need to be launched by a process
+# with system-level session isolation — running the daemon out of a --user
+# session made monitor-mode operations flaky in early tests. System-level
+# unit + non-root User=/Group= gives the same least-privilege posture with
+# cleaner semantics.
+Description=Kismet WiFi capture (sovereign-sigint Phase 7)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Runs as the operator (User=__TARGET_USER__) in the 'kismet' group. The
+# capture helpers are setuid-root from 'make suidinstall', so the daemon
+# itself never needs to be root. Matches the group model set up by the
+# 'usermod -aG kismet' line in phase7-kismet.sh.
+Type=simple
+User=__TARGET_USER__
+Group=kismet
+# --no-ncurses / --no-console-wrapper are essential for a daemon: kismet's
+# default interactive mode tries to attach to a tty and will exit with
+# "cannot open terminal" under systemd otherwise.
+ExecStart=/usr/local/bin/kismet --no-ncurses --no-console-wrapper
+Restart=on-failure
+RestartSec=10
+# Kismet writes 'Kismet-<timestamp>.kismet' files to its working directory
+# by default; putting it in the operator's $HOME keeps captures where the
+# kismet-refresh timer (also a --user unit under the same operator) already
+# looks for them, without needing extra environment configuration.
+WorkingDirectory=/home/__TARGET_USER__
+
+[Install]
+WantedBy=multi-user.target

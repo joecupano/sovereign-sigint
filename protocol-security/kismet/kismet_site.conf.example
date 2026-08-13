@@ -1,0 +1,39 @@
+# kismet_site.conf — site-local Kismet overrides for the sovereign-sigint box.
+#
+# Kismet loads this LAST, so anything here overrides the shipped configs.
+# It is the correct place for local, machine-specific settings — never edit
+# the shipped /usr/local/etc/kismet*.conf files directly.
+#
+# INSTALL: copy to /usr/local/etc/kismet_site.conf
+#   sudo cp kismet_site.conf.example /usr/local/etc/kismet_site.conf
+# then edit the source line below to match THIS box's interface name.
+#
+# The interface name is adapter-specific (the 'wlx<MAC>' predictable name).
+# On the reference box it is wlx00c0caa6850f (a MediaTek MT7612U, mainline
+# mt76x2u driver, monitor-capable). Find yours with:  iw dev
+# ---------------------------------------------------------------------
+
+# --- WiFi capture source ---------------------------------------------
+# Pre-define the WiFi source so Kismet auto-opens it on launch (no manual
+# "Add Data Source" step). Kismet puts the interface into monitor mode
+# itself. Replace the interface name with this box's adapter.
+#
+# name= gives it a friendly label in the UI; type is autodetected but
+# stating it is explicit. Channel hopping is on by default.
+source=wlx00c0caa6850f:name=wifi-mt7612u
+
+# --- Web server bind -------------------------------------------------
+# Kismet's web UI. On this build it is reachable on the LAN (ufw allows
+# 2501/tcp, same posture as OpenWebRX+). If you would rather keep it
+# loopback-only and reach it via SSH tunnel, set this to 127.0.0.1 and
+# remove the ufw rule.
+httpd_bind_address=0.0.0.0
+httpd_port=2501
+
+# --- Notes -----------------------------------------------------------
+# - Admin credentials are NOT set here. They live in ~/.kismet/kismet_httpd.conf
+#   (created on first run via the web UI) and are per-user, not site-wide.
+# - Logging: Kismet writes .kismet (SQLite) logs to its working directory
+#   by default. Run Kismet from a stable directory, or set log_prefix= here
+#   to a fixed path, so logs don't scatter.
+# log_prefix=/home/baldrick/kismet-logs/

@@ -1,0 +1,25 @@
+[Unit]
+Description=sovereign-sigint radiod occupancy producer (Phase 6.6)
+# Continuously measures per-channel occupancy from radiod's demodulated HF
+# channels and writes sightings to the occupancy DB. Depends on radiod
+# actually running (the RX-888 must be in AI mode, not handed to OpenWebRX+).
+After=network-online.target
+Wants=network-online.target
+# radiod runs as a system service; we can't hard-require it from a --user
+# unit, but we document the dependency: if radiod isn't up (RX-888 in
+# OpenWebRX+ mode), the producer's channels read silent and it records
+# nothing, which is correct behavior rather than an error.
+
+[Service]
+# Long-running, NOT oneshot: the producer's own --interval loop sweeps
+# every N seconds continuously. This is the "always watching" occupancy
+# source. __REPO_ROOT__ and __VENV_PYTHON__ substituted by
+# scripts/phase6-occupancy-producer.sh at install time.
+Type=simple
+WorkingDirectory=__REPO_ROOT__/decode
+ExecStart=__VENV_PYTHON__ __REPO_ROOT__/decode/radiod_occupancy_producer.py --interval 60
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

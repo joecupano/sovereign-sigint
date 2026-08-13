@@ -1,0 +1,36 @@
+[Unit]
+Description=Caddy reverse proxy (sovereign-sigint)
+After=network-online.target open-webui.service
+# Wants, NOT Requires: a hard Requires= caused a real, reproducible bug
+# where Caddy's start job failed permanently with result 'dependency'
+# on a boot-time race (open-webui not yet fully active when Caddy's job
+# was evaluated), leaving Caddy dead until manually started. Wants gives
+# the same start-ordering preference (paired with After=) without the
+# hard-fail; Restart=always below covers any brief startup gap where
+# open-webui's loopback port isn't ready yet.
+Wants=open-webui.service
+
+[Container]
+Image=docker.io/library/caddy:2-alpine
+ContainerName=caddy
+AutoUpdate=registry
+
+# Host networking, deliberately: Caddy and Open WebUI run on the same
+# single lab/production box (not a multi-host deployment), so this
+# avoids cross-container DNS/network config for a straightforward
+# reverse-proxy-to-loopback setup. Tradeoff: this bypasses Podman's
+# usual network-namespace isolation for this one container — a
+# reasonable call for a single-user box fronting only local services,
+# worth reconsidering if this box's threat model changes.
+Network=host
+
+Volume=%h/.config/containers/systemd/Caddyfile:/etc/caddy/Caddyfile:ro
+Volume=caddy-data:/data
+Volume=caddy-config:/config
+
+[Service]
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

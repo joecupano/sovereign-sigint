@@ -1,0 +1,9 @@
+[Unit]
+Description=sovereign-sigint SigID mirror sync (Phase 6.3)
+
+[Service]
+Type=oneshot
+# __REPO_ROOT__ and __VENV_PYTHON__ substituted by
+# scripts/phase6-sigid-mirror.sh at install time.
+WorkingDirectory=__REPO_ROOT__/reference
+ExecStart=__VENV_PYTHON__ __REPO_ROOT__/reference/sigid_mirror.py --once
