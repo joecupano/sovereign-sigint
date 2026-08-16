@@ -1,4 +1,6 @@
-# sovereign-sigint
+# Building Sovereign AI for Amateur Radio & SIGINT
+
+(A presented at HOPE 2026)
 
 A web-accessible software-defined radio platform with a local ("sovereign")
 AI layer for SIGINT. Signals captured by your own hardware become a structured,
